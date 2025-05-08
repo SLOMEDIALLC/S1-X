@@ -1,4 +1,4 @@
-name = "S1-X"
+name = "S1X"
 main = "worker.js"
 compatibility_date = "2023-01-01"
 
