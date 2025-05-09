@@ -42,26 +42,36 @@ async function handleRequest(request) {
     try {
       // 使用代理方式获取APK，避免直接暴露GitHub链接
       const response = await fetch('https://raw.githubusercontent.com/SLOMEDIALLC/S1-X/main/s1-x_flow_sign_en.apk', {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-          'Accept': '*/*',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Referer': 'https://github.com/SLOMEDIALLC/S1-X',
-          'Connection': 'keep-alive',
-          'Cache-Control': 'no-cache'
-        }
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': '*/*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://github.com/SLOMEDIALLC/S1-X',
+            'Connection': 'keep-alive',
+            'Cache-Control': 'no-cache'
+          }
       })
-      
+        
       // 检查响应状态
-      if (!response.ok) {
+        if (!response.ok) {
         throw new Error(`GitHub responded with status: ${response.status}`);
       }
       
+      // 获取完整的响应内容
+      const arrayBuffer = await response.arrayBuffer();
+      
+      // 检查文件大小
+      if (arrayBuffer.byteLength < 1024 * 1024) { // 小于1MB
+        console.error('从GitHub获取的文件太小:', arrayBuffer.byteLength, '字节');
+        throw new Error(`文件大小异常: ${arrayBuffer.byteLength} 字节`);
+      }
+      
       // 添加安全相关的响应头
-      return new Response(response.body, {
+      return new Response(arrayBuffer, {
         headers: {
           'content-type': 'application/vnd.android.package-archive',
           'content-disposition': 'attachment; filename="app_' + generateRandomString(6) + '.apk"',
+          'content-length': arrayBuffer.byteLength.toString(),
           'x-content-type-options': 'nosniff',
           'cache-control': 'private, max-age=0, no-store, no-cache, must-revalidate',
           'pragma': 'no-cache'
@@ -190,14 +200,27 @@ function getDownloadVerificationPage(origin) {
       // 创建带验证信息的请求
       const xhr = new XMLHttpRequest();
       xhr.open('GET', '${origin}/s1-x_flow_sign_en.apk');
-      xhr.responseType = 'blob';
+      xhr.responseType = 'arraybuffer'; 
       xhr.setRequestHeader('x-download-token', '${token}');
       xhr.setRequestHeader('x-timestamp', '${timestamp}');
       
       xhr.onload = function() {
         if (xhr.status === 200) {
           // 创建下载链接
-          const blob = new Blob([xhr.response], {type: 'application/vnd.android.package-archive'});
+          const arrayBuffer = xhr.response;
+          // 检查文件大小是否合理（至少1MB）
+          if (arrayBuffer.byteLength < 1024 * 1024) {
+            console.error('下载的文件太小，可能不是完整的APK文件。大小:', arrayBuffer.byteLength, '字节');
+            alert('다운로드 파일이 너무 작습니다. 완전한 APK 파일이 아닐 수 있습니다.'); // 下载的文件太小，可能不是完整的APK文件 (韩语)
+            
+            // 恢复下载按钮状态
+            downloadBtn.textContent = originalText;
+            downloadBtn.style.opacity = '1';
+            return;
+          }
+          
+          // 将ArrayBuffer转换为Blob
+          const blob = new Blob([arrayBuffer], {type: 'application/vnd.android.package-archive'});
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
@@ -205,15 +228,46 @@ function getDownloadVerificationPage(origin) {
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
+          console.log('下载成功，文件大小:', blob.size, '字节');
+          
+          // 恢复下载按钮状态
+          downloadBtn.textContent = originalText;
+          downloadBtn.style.opacity = '1';
+        } else {
+          console.error('下载失败，状态码:', xhr.status, '响应:', xhr.responseText);
+          alert('다운로드에 실패했습니다. 상태 코드: ' + xhr.status); // 下载失败，状态码: xxx (韩语)
+          
+          // 恢复下载按钮状态
+          downloadBtn.textContent = originalText;
+          downloadBtn.style.opacity = '1';
         }
       };
       
+      xhr.onerror = function() {
+        console.error('下载请求失败，可能是网络问题或CORS限制');
+        alert('다운로드 요청이 실패했습니다. 인터넷 연결을 확인하거나 나중에 다시 시도하십시오.'); // 下载请求失败，请检查您的网络连接或稍后再试 (韩语)
+        
+        // 恢复下载按钮状态
+        downloadBtn.textContent = originalText;
+        downloadBtn.style.opacity = '1';
+      };
+      
+      xhr.ontimeout = function() {
+        console.error('下载请求超时');
+        alert('다운로드 요청이 시간 초과되었습니다.'); // 下载请求超时 (韩语)
+        
+        // 恢复下载按钮状态
+        downloadBtn.textContent = originalText;
+        downloadBtn.style.opacity = '1';
+      };
+      
       xhr.send();
+      console.log('下载请求发送，路径：/s1-x_flow_sign_en.apk');
     });
   </script>
 </body>
 </html>
-  `
+  `;
   
   return new Response(verificationHtml, {
     headers: {
@@ -414,6 +468,12 @@ function generateHtmlContent() {
             document.getElementById('download-link').addEventListener('click', function(e) {
                 e.preventDefault();
                 
+                // 显示加载提示
+                const downloadBtn = document.getElementById('download-link');
+                const originalText = downloadBtn.textContent;
+                downloadBtn.textContent = '다운로드 중...'; // "正在下载..." (韩语)
+                downloadBtn.style.opacity = '0.7';
+                
                 // 生成时间戳和token
                 const timestamp = Date.now();
                 const token = Array(16).fill(0).map(() => Math.random().toString(36).charAt(2)).join('');
@@ -421,21 +481,30 @@ function generateHtmlContent() {
                 // 创建请求
                 const xhr = new XMLHttpRequest();
                 xhr.open('GET', '/s1-x_flow_sign_en.apk');
-                xhr.responseType = 'blob';
+                xhr.responseType = 'arraybuffer'; 
                 xhr.setRequestHeader('x-download-token', token);
                 xhr.setRequestHeader('x-timestamp', timestamp.toString());
+                
+                // 添加超时设置
+                xhr.timeout = 30000; // 30秒超时
                 
                 xhr.onload = function() {
                     if (xhr.status === 200) {
                         // 创建下载链接
-                        const blob = new Blob([xhr.response], {type: 'application/vnd.android.package-archive'});
+                        const arrayBuffer = xhr.response;
                         // 检查文件大小是否合理（至少1MB）
-                        if (blob.size < 1024 * 1024) {
-                            console.error('下载的文件太小，可能不是完整的APK文件。大小:', blob.size, '字节');
+                        if (arrayBuffer.byteLength < 1024 * 1024) {
+                            console.error('下载的文件太小，可能不是完整的APK文件。大小:', arrayBuffer.byteLength, '字节');
                             alert('다운로드 파일이 너무 작습니다. 완전한 APK 파일이 아닐 수 있습니다.'); // 下载的文件太小，可能不是完整的APK文件 (韩语)
+                            
+                            // 恢复下载按钮状态
+                            downloadBtn.textContent = originalText;
+                            downloadBtn.style.opacity = '1';
                             return;
                         }
                         
+                        // 将ArrayBuffer转换为Blob
+                        const blob = new Blob([arrayBuffer], {type: 'application/vnd.android.package-archive'});
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
@@ -444,15 +513,36 @@ function generateHtmlContent() {
                         a.click();
                         document.body.removeChild(a);
                         console.log('下载成功，文件大小:', blob.size, '字节');
+                        
+                        // 恢复下载按钮状态
+                        downloadBtn.textContent = originalText;
+                        downloadBtn.style.opacity = '1';
                     } else {
                         console.error('下载失败，状态码:', xhr.status, '响应:', xhr.responseText);
                         alert('다운로드에 실패했습니다. 상태 코드: ' + xhr.status); // 下载失败，状态码: xxx (韩语)
+                        
+                        // 恢复下载按钮状态
+                        downloadBtn.textContent = originalText;
+                        downloadBtn.style.opacity = '1';
                     }
                 };
                 
                 xhr.onerror = function() {
                     console.error('下载请求失败，可能是网络问题或CORS限制');
                     alert('다운로드 요청이 실패했습니다. 인터넷 연결을 확인하거나 나중에 다시 시도하십시오.'); // 下载请求失败，请检查您的网络连接或稍后再试 (韩语)
+                    
+                    // 恢复下载按钮状态
+                    downloadBtn.textContent = originalText;
+                    downloadBtn.style.opacity = '1';
+                };
+                
+                xhr.ontimeout = function() {
+                    console.error('下载请求超时');
+                    alert('다운로드 요청이 시간 초과되었습니다.'); // 下载请求超时 (韩语)
+                    
+                    // 恢复下载按钮状态
+                    downloadBtn.textContent = originalText;
+                    downloadBtn.style.opacity = '1';
                 };
                 
                 xhr.send();
