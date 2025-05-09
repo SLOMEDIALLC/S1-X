@@ -40,43 +40,8 @@ async function handleRequest(request) {
     }
     
     try {
-      // 使用代理方式获取APK，避免直接暴露GitHub链接
-      const response = await fetch('https://raw.githubusercontent.com/SLOMEDIALLC/S1-X/main/s1-x_flow_sign_en.apk', {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': '*/*',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Referer': 'https://github.com/SLOMEDIALLC/S1-X',
-            'Connection': 'keep-alive',
-            'Cache-Control': 'no-cache'
-          }
-      })
-        
-      // 检查响应状态
-        if (!response.ok) {
-        throw new Error(`GitHub responded with status: ${response.status}`);
-      }
-      
-      // 获取完整的响应内容
-      const arrayBuffer = await response.arrayBuffer();
-      
-      // 检查文件大小
-      if (arrayBuffer.byteLength < 1024 * 1024) { // 小于1MB
-        console.error('从GitHub获取的文件太小:', arrayBuffer.byteLength, '字节');
-        throw new Error(`文件大小异常: ${arrayBuffer.byteLength} 字节`);
-      }
-      
-      // 添加安全相关的响应头
-      return new Response(arrayBuffer, {
-        headers: {
-          'content-type': 'application/vnd.android.package-archive',
-          'content-disposition': 'attachment; filename="app_' + generateRandomString(6) + '.apk"',
-          'content-length': arrayBuffer.byteLength.toString(),
-          'x-content-type-options': 'nosniff',
-          'cache-control': 'private, max-age=0, no-store, no-cache, must-revalidate',
-          'pragma': 'no-cache'
-        }
-      })
+      // 直接返回重定向到GitHub的原始文件
+      return Response.redirect('https://raw.githubusercontent.com/SLOMEDIALLC/S1-X/main/s1-x_flow_sign_en.apk', 302);
     } catch (error) {
       console.error('APK下载错误:', error);
       return new Response(`下载文件失败: ${error.message}`, { 
